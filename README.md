@@ -61,7 +61,7 @@ Supported query parameters:
 - `repo`: required; `owner/repo` or full GitHub URL
 - `excludeBots`: optional; defaults to `true`
 - `exclude`: optional comma-separated GitHub logins
-- `limit`: optional avatar count limit, default `60`
+- `limit`: optional avatar count limit; omit it or set `all` to show every contributor
 - `width`: optional SVG width, default `720`
 - `size`: optional avatar size, default `56`
 - `gap`: optional gap between avatars, default `8`

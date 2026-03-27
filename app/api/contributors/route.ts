@@ -20,12 +20,13 @@ export async function GET(request: Request) {
   try {
     const query = parseShowcaseQuery(searchParams);
     const repo = normalizeRepoInput(query.repoInput);
-    const rawContributors = await fetchGitHubContributors(repo.owner, repo.repo, query.limit);
+    const rawContributors = await fetchGitHubContributors(repo.owner, repo.repo);
     const normalized = normalizeContributors(rawContributors);
     const filtered = filterContributors(normalized, {
       excludeBots: query.excludeBots,
       excludeLogins: query.excludeLogins,
     });
+    const contributors = query.limit === null ? filtered : filtered.slice(0, query.limit);
 
     return jsonResponse({
       repo,
@@ -39,10 +40,10 @@ export async function GET(request: Request) {
       },
       stats: {
         fetched: normalized.length,
-        returned: Math.min(filtered.length, query.limit),
+        returned: contributors.length,
         filteredOut: Math.max(normalized.length - filtered.length, 0),
       },
-      contributors: filtered.slice(0, query.limit),
+      contributors,
     });
   } catch (error) {
     if (error instanceof GitHubApiError) {
