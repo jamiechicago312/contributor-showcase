@@ -1,10 +1,10 @@
 import type { ShowcaseQuery } from '@/lib/types';
 
 const DEFAULT_REPO = 'OpenHands/OpenHands';
-const DEFAULT_LIMIT = 60;
 const DEFAULT_WIDTH = 720;
 const DEFAULT_SIZE = 56;
 const DEFAULT_GAP = 8;
+const MAX_LIMIT = 100000;
 
 type SearchParamReader = {
   get(name: string): string | null;
@@ -44,6 +44,20 @@ function parseInteger(value: string | null, fallback: number, min: number, max: 
   return clamp(parsed, min, max);
 }
 
+function parseLimit(value: string | null): number | null {
+  if (!value || /^(all|max)$/i.test(value)) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+
+  return clamp(parsed, 1, MAX_LIMIT);
+}
+
 export function parseExcludeList(value: string | null): string[] {
   if (!value) {
     return [];
@@ -64,7 +78,7 @@ export function parseShowcaseQuery(searchParams: SearchParamReader): ShowcaseQue
     repoInput: searchParams.get('repo')?.trim() || DEFAULT_REPO,
     excludeBots: parseBoolean(searchParams.get('excludeBots'), true),
     excludeLogins: parseExcludeList(searchParams.get('exclude')),
-    limit: parseInteger(searchParams.get('limit'), DEFAULT_LIMIT, 1, 200),
+    limit: parseLimit(searchParams.get('limit')),
     width: parseInteger(searchParams.get('width'), DEFAULT_WIDTH, 160, 1600),
     size: parseInteger(searchParams.get('size'), DEFAULT_SIZE, 24, 128),
     gap: parseInteger(searchParams.get('gap'), DEFAULT_GAP, 0, 48),

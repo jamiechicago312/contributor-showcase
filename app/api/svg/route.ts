@@ -36,12 +36,13 @@ export async function GET(request: Request) {
   try {
     const query = parseShowcaseQuery(searchParams);
     const repo = normalizeRepoInput(query.repoInput);
-    const rawContributors = await fetchGitHubContributors(repo.owner, repo.repo, query.limit);
+    const rawContributors = await fetchGitHubContributors(repo.owner, repo.repo);
     const normalized = normalizeContributors(rawContributors);
-    const contributors = filterContributors(normalized, {
+    const filtered = filterContributors(normalized, {
       excludeBots: query.excludeBots,
       excludeLogins: query.excludeLogins,
-    }).slice(0, query.limit);
+    });
+    const contributors = query.limit === null ? filtered : filtered.slice(0, query.limit);
 
     const svg = await buildContributorSvg(contributors, {
       repoSlug: repo.slug,

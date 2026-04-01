@@ -2,7 +2,6 @@ import type { RawGitHubContributor } from '@/lib/types';
 
 const GITHUB_API_BASE_URL = 'https://api.github.com';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-const MAX_PAGES = 10;
 
 export class GitHubApiError extends Error {
   status: number;
@@ -25,12 +24,10 @@ function buildHeaders(): HeadersInit {
 export async function fetchGitHubContributors(
   owner: string,
   repo: string,
-  targetCount: number,
 ): Promise<RawGitHubContributor[]> {
   const contributors: RawGitHubContributor[] = [];
-  const maxResults = Math.max(100, Math.min(targetCount * 3, 500));
 
-  for (let page = 1; page <= MAX_PAGES; page += 1) {
+  for (let page = 1; ; page += 1) {
     const response = await fetch(
       `${GITHUB_API_BASE_URL}/repos/${owner}/${repo}/contributors?per_page=100&page=${page}`,
       {
@@ -62,7 +59,7 @@ export async function fetchGitHubContributors(
 
     contributors.push(...pageContributors);
 
-    if (pageContributors.length < 100 || contributors.length >= maxResults) {
+    if (pageContributors.length < 100) {
       break;
     }
   }

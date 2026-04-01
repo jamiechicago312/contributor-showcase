@@ -24,7 +24,7 @@ export type ShowcaseQuery = {
   repoInput: string;
   excludeBots: boolean;
   excludeLogins: string[];
-  limit: number;
+  limit: number | null;
   width: number;
   size: number;
   gap: number;
