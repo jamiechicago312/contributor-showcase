@@ -49,6 +49,9 @@ export async function GET(request: Request) {
       width: query.width,
       size: query.size,
       gap: query.gap,
+      animate: query.animate,
+      speed: query.speed,
+      rows: query.rows,
     });
 
     return svgResponse(svg);
