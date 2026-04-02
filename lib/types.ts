@@ -26,6 +26,7 @@ export type ShowcaseQuery = {
   excludeLogins: string[];
   limit: number | null;
   width: number;
+  height: number | null;
   size: number;
   gap: number;
 };
@@ -33,6 +34,7 @@ export type ShowcaseQuery = {
 export type SvgLayoutOptions = {
   repoSlug: string;
   width: number;
+  height: number | null;
   size: number;
   gap: number;
 };
