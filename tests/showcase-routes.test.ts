@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 import { GET as getContributors } from '@/app/api/contributors/route';
 import { GET as getSvg } from '@/app/api/svg/route';
+import { calculateLayout } from '@/lib/svg';
 
 type RawContributor = {
   login: string;
@@ -110,5 +111,69 @@ describe('showcase routes', () => {
     assert.match(svg, /user-205 · 205 contributions/);
     assert.equal(requests.getGithubRequests(), 3);
     assert.equal(requests.getAvatarRequests(), 205);
+  });
+
+  it('shrinks avatar size when height constraint is set', async () => {
+    const contributors = Array.from({ length: 100 }, (_, index) => createContributor(index + 1));
+    installFetchMock(contributors);
+
+    const response = await getSvg(new Request('http://localhost/api/svg?repo=owner/repo&height=100'));
+    const svg = await response.text();
+
+    assert.equal(response.status, 200);
+    const widthMatch = svg.match(/width="(\d+)"/);
+    const heightMatch = svg.match(/height="(\d+)"/);
+    assert.ok(widthMatch, 'SVG should have width attribute');
+    assert.ok(heightMatch, 'SVG should have height attribute');
+    const svgHeight = Number.parseInt(heightMatch[1], 10);
+    assert.ok(svgHeight <= 100, `SVG height ${svgHeight} should be <= 100`);
+    assert.equal((svg.match(/<image /g) ?? []).length, 100);
+  });
+
+  it('uses default width of 830 when width is not specified', async () => {
+    const contributors = Array.from({ length: 10 }, (_, index) => createContributor(index + 1));
+    installFetchMock(contributors);
+
+    const response = await getSvg(new Request('http://localhost/api/svg?repo=owner/repo'));
+    const svg = await response.text();
+
+    assert.equal(response.status, 200);
+    assert.match(svg, /width="830"/);
+  });
+});
+
+describe('calculateLayout', () => {
+  it('returns preferred size when no height constraint', () => {
+    const result = calculateLayout(10, 830, null, 56, 8);
+    assert.equal(result.size, 56);
+  });
+
+  it('returns preferred size when all contributors fit within height', () => {
+    const result = calculateLayout(10, 830, 500, 56, 8);
+    assert.equal(result.size, 56);
+  });
+
+  it('shrinks avatar size when contributors do not fit within height', () => {
+    const result = calculateLayout(100, 830, 100, 56, 8);
+    assert.ok(result.size < 56, `Size ${result.size} should be less than preferred size 56`);
+    assert.ok(result.size >= 16, `Size ${result.size} should be at least minimum size 16`);
+    assert.ok(result.finalHeight <= 100, `Height ${result.finalHeight} should be <= 100`);
+  });
+
+  it('returns minimum size when height is very small', () => {
+    const result = calculateLayout(100, 830, 50, 56, 8);
+    assert.equal(result.size, 16);
+  });
+
+  it('handles empty contributor list', () => {
+    const result = calculateLayout(0, 830, null, 56, 8);
+    assert.equal(result.size, 56);
+    assert.equal(result.finalHeight, 88);
+  });
+
+  it('calculates correct number of columns', () => {
+    const result = calculateLayout(20, 830, null, 56, 8);
+    const expectedColumns = Math.floor((830 + 8) / (56 + 8));
+    assert.equal(result.columns, expectedColumns);
   });
 });

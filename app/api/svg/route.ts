@@ -47,6 +47,7 @@ export async function GET(request: Request) {
     const svg = await buildContributorSvg(contributors, {
       repoSlug: repo.slug,
       width: query.width,
+      height: query.height,
       size: query.size,
       gap: query.gap,
     });
