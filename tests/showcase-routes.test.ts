@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 import { GET as getContributors } from '@/app/api/contributors/route';
 import { GET as getSvg } from '@/app/api/svg/route';
+import { parseShowcaseQuery } from '@/lib/query';
 
 type RawContributor = {
   login: string;
@@ -110,5 +111,52 @@ describe('showcase routes', () => {
     assert.match(svg, /user-205 · 205 contributions/);
     assert.equal(requests.getGithubRequests(), 3);
     assert.equal(requests.getAvatarRequests(), 205);
+  });
+
+  it('renders animated SVG with CSS keyframes when animate=true', async () => {
+    const contributors = Array.from({ length: 30 }, (_, index) => createContributor(index + 1));
+    installFetchMock(contributors);
+
+    const response = await getSvg(new Request('http://localhost/api/svg?repo=owner/repo&animate=true&rows=3'));
+    const svg = await response.text();
+
+    assert.equal(response.status, 200);
+    assert.match(svg, /animated ticker/);
+    assert.match(svg, /@keyframes scroll-row-0/);
+    assert.match(svg, /@keyframes scroll-row-1/);
+    assert.match(svg, /@keyframes scroll-row-2/);
+    assert.match(svg, /animation:.*linear infinite/);
+    assert.match(svg, /translateX/);
+  });
+
+  it('parses animate query parameter correctly', () => {
+    const params = new URLSearchParams('repo=owner/repo&animate=true&speed=50&rows=5');
+    const query = parseShowcaseQuery(params);
+
+    assert.equal(query.animate, true);
+    assert.equal(query.speed, 50);
+    assert.equal(query.rows, 5);
+  });
+
+  it('defaults animate to false when not specified', () => {
+    const params = new URLSearchParams('repo=owner/repo');
+    const query = parseShowcaseQuery(params);
+
+    assert.equal(query.animate, false);
+    assert.equal(query.speed, 30);
+    assert.equal(query.rows, 3);
+  });
+
+  it('renders static SVG without animation keyframes when animate is not set', async () => {
+    const contributors = Array.from({ length: 10 }, (_, index) => createContributor(index + 1));
+    installFetchMock(contributors);
+
+    const response = await getSvg(new Request('http://localhost/api/svg?repo=owner/repo'));
+    const svg = await response.text();
+
+    assert.equal(response.status, 200);
+    assert.doesNotMatch(svg, /@keyframes/);
+    assert.doesNotMatch(svg, /animation:/);
+    assert.doesNotMatch(svg, /animated ticker/);
   });
 });

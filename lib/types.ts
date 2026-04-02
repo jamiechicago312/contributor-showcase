@@ -28,6 +28,9 @@ export type ShowcaseQuery = {
   width: number;
   size: number;
   gap: number;
+  animate: boolean;
+  speed: number;
+  rows: number;
 };
 
 export type SvgLayoutOptions = {
@@ -35,4 +38,7 @@ export type SvgLayoutOptions = {
   width: number;
   size: number;
   gap: number;
+  animate?: boolean;
+  speed?: number;
+  rows?: number;
 };

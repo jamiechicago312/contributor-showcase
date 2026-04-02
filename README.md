@@ -65,12 +65,31 @@ Supported query parameters:
 - `width`: optional SVG width, default `720`
 - `size`: optional avatar size, default `56`
 - `gap`: optional gap between avatars, default `8`
+- `animate`: optional; set to `true` to enable animated ticker mode
+- `speed`: optional animation speed in pixels per second, default `30` (only applies when `animate=true`)
+- `rows`: optional number of rows for animated ticker, default `3` (only applies when `animate=true`)
 
-Example:
+Example (static):
 
 ```md
 ![Contributors](https://your-deployment.vercel.app/api/svg?repo=OpenHands/OpenHands&exclude=dependabot,renovate)
 ```
+
+Example (animated ticker):
+
+```md
+![Contributors](https://your-deployment.vercel.app/api/svg?repo=OpenHands/OpenHands&animate=true&rows=4&speed=40)
+```
+
+### Animated Ticker Mode
+
+When `animate=true` is set, the SVG renders as a horizontal scrolling ticker with CSS animations:
+
+- Contributors are distributed across multiple rows (default: 3)
+- Each row scrolls horizontally in alternating directions
+- The animation loops infinitely and seamlessly
+- Works in browsers, GitHub READMEs, and anywhere SVGs with CSS are supported
+- No JavaScript required - pure CSS animations embedded in the SVG
 
 ## API routes
 

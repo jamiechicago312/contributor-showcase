@@ -4,6 +4,8 @@ const DEFAULT_REPO = 'OpenHands/OpenHands';
 const DEFAULT_WIDTH = 720;
 const DEFAULT_SIZE = 56;
 const DEFAULT_GAP = 8;
+const DEFAULT_SPEED = 30;
+const DEFAULT_ROWS = 3;
 const MAX_LIMIT = 100000;
 
 type SearchParamReader = {
@@ -82,6 +84,9 @@ export function parseShowcaseQuery(searchParams: SearchParamReader): ShowcaseQue
     width: parseInteger(searchParams.get('width'), DEFAULT_WIDTH, 160, 1600),
     size: parseInteger(searchParams.get('size'), DEFAULT_SIZE, 24, 128),
     gap: parseInteger(searchParams.get('gap'), DEFAULT_GAP, 0, 48),
+    animate: parseBoolean(searchParams.get('animate'), false),
+    speed: parseInteger(searchParams.get('speed'), DEFAULT_SPEED, 5, 100),
+    rows: parseInteger(searchParams.get('rows'), DEFAULT_ROWS, 1, 10),
   };
 }
 
