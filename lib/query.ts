@@ -102,7 +102,14 @@ export function parseShowcaseQuery(searchParams: SearchParamReader): ShowcaseQue
   };
 }
 
-export function buildQueryString(query: Pick<ShowcaseQuery, 'repoInput' | 'excludeBots' | 'excludeLogins'>): string {
+export type BuildQueryOptions = Pick<ShowcaseQuery, 'repoInput' | 'excludeBots' | 'excludeLogins'> & {
+  width?: number | null;
+  height?: number | null;
+  size?: number | null;
+  gap?: number | null;
+};
+
+export function buildQueryString(query: BuildQueryOptions): string {
   const params = new URLSearchParams();
   params.set('repo', query.repoInput.trim() || DEFAULT_REPO);
 
@@ -112,6 +119,22 @@ export function buildQueryString(query: Pick<ShowcaseQuery, 'repoInput' | 'exclu
 
   if (query.excludeLogins.length > 0) {
     params.set('exclude', query.excludeLogins.join(','));
+  }
+
+  if (query.width != null && query.width !== DEFAULT_WIDTH) {
+    params.set('width', String(query.width));
+  }
+
+  if (query.height != null) {
+    params.set('height', String(query.height));
+  }
+
+  if (query.size != null && query.size !== DEFAULT_SIZE) {
+    params.set('size', String(query.size));
+  }
+
+  if (query.gap != null && query.gap !== DEFAULT_GAP) {
+    params.set('gap', String(query.gap));
   }
 
   return params.toString();

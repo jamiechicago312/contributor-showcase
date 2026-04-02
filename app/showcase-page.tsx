@@ -28,19 +28,37 @@ type FormState = {
   repoInput: string;
   excludeBots: boolean;
   exclude: string;
+  width: string;
+  height: string;
+  size: string;
+  gap: string;
 };
 
 const DEFAULT_STATE: FormState = {
   repoInput: 'OpenHands/OpenHands',
   excludeBots: true,
   exclude: '',
+  width: '830',
+  height: '',
+  size: '56',
+  gap: '8',
 };
+
+function parseOptionalInt(value: string | null, fallback: string): string {
+  if (!value) return fallback;
+  const num = Number.parseInt(value, 10);
+  return Number.isFinite(num) ? String(num) : fallback;
+}
 
 function readFormState(searchParams: URLSearchParams): FormState {
   return {
     repoInput: searchParams.get('repo')?.trim() || DEFAULT_STATE.repoInput,
     excludeBots: searchParams.get('excludeBots') !== 'false',
     exclude: searchParams.get('exclude') || '',
+    width: parseOptionalInt(searchParams.get('width'), DEFAULT_STATE.width),
+    height: searchParams.get('height') || '',
+    size: parseOptionalInt(searchParams.get('size'), DEFAULT_STATE.size),
+    gap: parseOptionalInt(searchParams.get('gap'), DEFAULT_STATE.gap),
   };
 }
 
@@ -125,6 +143,10 @@ export default function HomePage() {
         repoInput: appliedState.repoInput,
         excludeBots: appliedState.excludeBots,
         excludeLogins: parseExcludeList(appliedState.exclude),
+        width: appliedState.width ? Number.parseInt(appliedState.width, 10) : null,
+        height: appliedState.height ? Number.parseInt(appliedState.height, 10) : null,
+        size: appliedState.size ? Number.parseInt(appliedState.size, 10) : null,
+        gap: appliedState.gap ? Number.parseInt(appliedState.gap, 10) : null,
       }),
     [appliedState],
   );
@@ -147,16 +169,24 @@ export default function HomePage() {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const nextState = {
+    const nextState: FormState = {
       repoInput: formState.repoInput.trim() || DEFAULT_STATE.repoInput,
       excludeBots: formState.excludeBots,
       exclude: formState.exclude,
+      width: formState.width || DEFAULT_STATE.width,
+      height: formState.height,
+      size: formState.size || DEFAULT_STATE.size,
+      gap: formState.gap || DEFAULT_STATE.gap,
     };
 
     const params = buildQueryString({
       repoInput: nextState.repoInput,
       excludeBots: nextState.excludeBots,
       excludeLogins: parseExcludeList(nextState.exclude),
+      width: nextState.width ? Number.parseInt(nextState.width, 10) : null,
+      height: nextState.height ? Number.parseInt(nextState.height, 10) : null,
+      size: nextState.size ? Number.parseInt(nextState.size, 10) : null,
+      gap: nextState.gap ? Number.parseInt(nextState.gap, 10) : null,
     });
 
     router.replace(`${pathname}?${params}`);
@@ -203,6 +233,64 @@ export default function HomePage() {
               onChange={(event) => setFormState((current) => ({ ...current, exclude: event.target.value }))}
             />
           </label>
+
+          <fieldset className="field-group field-span-2 layout-fieldset">
+            <legend>Layout options</legend>
+            <div className="layout-grid">
+              <label className="field-group">
+                <span>Width (px)</span>
+                <input
+                  type="number"
+                  name="width"
+                  min="160"
+                  max="1600"
+                  placeholder="830"
+                  value={formState.width}
+                  onChange={(event) => setFormState((current) => ({ ...current, width: event.target.value }))}
+                />
+              </label>
+
+              <label className="field-group">
+                <span>Max height (px)</span>
+                <input
+                  type="number"
+                  name="height"
+                  min="16"
+                  max="4000"
+                  placeholder="Auto"
+                  value={formState.height}
+                  onChange={(event) => setFormState((current) => ({ ...current, height: event.target.value }))}
+                />
+              </label>
+
+              <label className="field-group">
+                <span>Avatar size (px)</span>
+                <input
+                  type="number"
+                  name="size"
+                  min="16"
+                  max="128"
+                  placeholder="56"
+                  value={formState.size}
+                  onChange={(event) => setFormState((current) => ({ ...current, size: event.target.value }))}
+                />
+              </label>
+
+              <label className="field-group">
+                <span>Gap (px)</span>
+                <input
+                  type="number"
+                  name="gap"
+                  min="0"
+                  max="48"
+                  placeholder="8"
+                  value={formState.gap}
+                  onChange={(event) => setFormState((current) => ({ ...current, gap: event.target.value }))}
+                />
+              </label>
+            </div>
+            <p className="layout-hint">Set max height to constrain the SVG. Avatars shrink automatically to fit.</p>
+          </fieldset>
 
           <div className="action-row field-span-2">
             <button type="submit">Update preview</button>
