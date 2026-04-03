@@ -16,6 +16,10 @@ function toDataUri(contentType: string, bytes: ArrayBuffer): string {
 }
 
 async function inlineAvatar(avatarUrl: string, size: number): Promise<string> {
+  if (avatarUrl.startsWith('data:')) {
+    return avatarUrl;
+  }
+
   const sizedUrl = `${avatarUrl}${avatarUrl.includes('?') ? '&' : '?'}s=${Math.max(size * 2, 64)}`;
 
   try {

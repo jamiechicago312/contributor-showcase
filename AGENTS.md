@@ -9,3 +9,4 @@
 - Tests use Node's built-in runner via `tsx --test`; the main route coverage lives in `tests/showcase-routes.test.ts`.
 - `GITHUB_TOKEN` is optional for public repos but recommended to avoid rate limits in local and Vercel environments.
 - Showcase UI now defaults to showing every contributor except dependabot-style accounts, which are auto-excluded; other manual exclusions are entered via text input with lightweight client-side suggestions from the loaded contributor list.
+- GitHub contributor fetching now requests `anon=1` so large repos can include anonymous commit authors beyond the named-account contributor list; anonymous contributors get generated placeholder avatars and no profile link.

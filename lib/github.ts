@@ -29,7 +29,7 @@ export async function fetchGitHubContributors(
 
   for (let page = 1; ; page += 1) {
     const response = await fetch(
-      `${GITHUB_API_BASE_URL}/repos/${owner}/${repo}/contributors?per_page=100&page=${page}`,
+      `${GITHUB_API_BASE_URL}/repos/${owner}/${repo}/contributors?per_page=100&page=${page}&anon=1`,
       {
         headers: buildHeaders(),
         next: { revalidate: 3600 },

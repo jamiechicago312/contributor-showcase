@@ -18,7 +18,7 @@ type ContributorResponse = {
   contributors: Array<{
     login: string;
     avatarUrl: string;
-    profileUrl: string;
+    profileUrl: string | null;
     contributions: number;
   }>;
   error?: string;
@@ -419,11 +419,23 @@ export default function HomePage() {
                 Showing contributors for <strong>{data.repo.slug}</strong>.
               </p>
               <div className="avatar-list" aria-label="Contributor list">
-                {data.contributors.slice(0, 18).map((contributor) => (
-                  <a key={contributor.login} href={contributor.profileUrl} target="_blank" rel="noreferrer" title={contributor.login}>
-                    <img src={contributor.avatarUrl} alt={contributor.login} width={36} height={36} />
-                  </a>
-                ))}
+                {data.contributors.slice(0, 18).map((contributor) => {
+                  const avatar = <img src={contributor.avatarUrl} alt={contributor.login} width={36} height={36} />;
+
+                  if (!contributor.profileUrl) {
+                    return (
+                      <span key={contributor.login} title={`${contributor.login} (anonymous contributor)`}>
+                        {avatar}
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <a key={contributor.login} href={contributor.profileUrl} target="_blank" rel="noreferrer" title={contributor.login}>
+                      {avatar}
+                    </a>
+                  );
+                })}
               </div>
             </>
           ) : (
