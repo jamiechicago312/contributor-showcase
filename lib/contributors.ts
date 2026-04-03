@@ -4,6 +4,21 @@ function isDependabotLike(login: string): boolean {
   return login.toLowerCase().startsWith('dependabot');
 }
 
+function buildAnonymousAvatar(label: string): string {
+  const initials = label
+    .split(/[^a-z0-9]+/i)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('') || '?';
+
+  const safeLabel = label.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  const hue = Array.from(label).reduce((total, char) => total + char.charCodeAt(0), 0) % 360;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="${safeLabel}"><rect width="64" height="64" rx="32" fill="hsl(${hue} 45% 24%)"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="700" fill="white">${initials}</text></svg>`;
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
 function isLikelyBot(login: string, type?: string): boolean {
   if (type === 'Bot') {
     return true;
@@ -20,18 +35,31 @@ function isLikelyBot(login: string, type?: string): boolean {
   );
 }
 
+function normalizeLogin(contributor: RawGitHubContributor, index: number): string {
+  const name = contributor.name?.trim();
+  const emailPrefix = contributor.email?.split('@')[0]?.trim();
+  return contributor.login?.trim() || name || emailPrefix || `anonymous-${index + 1}`;
+}
+
 export function normalizeContributors(rawContributors: RawGitHubContributor[]): Contributor[] {
-  return rawContributors
-    .filter((contributor): contributor is Required<Pick<RawGitHubContributor, 'login' | 'avatar_url' | 'html_url'>> & RawGitHubContributor => {
-      return Boolean(contributor.login && contributor.avatar_url && contributor.html_url);
-    })
-    .map((contributor) => ({
-      login: contributor.login,
-      avatarUrl: contributor.avatar_url,
-      profileUrl: contributor.html_url,
+  const seenLogins = new Map<string, number>();
+
+  return rawContributors.map((contributor, index) => {
+    const baseLogin = normalizeLogin(contributor, index);
+    const normalizedLogin = baseLogin.toLowerCase();
+    const duplicateCount = seenLogins.get(normalizedLogin) ?? 0;
+    seenLogins.set(normalizedLogin, duplicateCount + 1);
+
+    const login = duplicateCount === 0 ? baseLogin : `${baseLogin} (${duplicateCount + 1})`;
+
+    return {
+      login,
+      avatarUrl: contributor.avatar_url?.trim() || buildAnonymousAvatar(login),
+      profileUrl: contributor.html_url?.trim() || null,
       contributions: contributor.contributions ?? 0,
-      isBot: isLikelyBot(contributor.login, contributor.type),
-    }));
+      isBot: isLikelyBot(login, contributor.type),
+    };
+  });
 }
 
 export function filterContributors(

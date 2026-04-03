@@ -4,12 +4,14 @@ export type RawGitHubContributor = {
   html_url?: string;
   contributions?: number;
   type?: string;
+  name?: string;
+  email?: string;
 };
 
 export type Contributor = {
   login: string;
   avatarUrl: string;
-  profileUrl: string;
+  profileUrl: string | null;
   contributions: number;
   isBot: boolean;
 };

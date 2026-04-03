@@ -5,11 +5,13 @@ import { GET as getSvg } from '@/app/api/svg/route';
 import { calculateLayout } from '@/lib/svg';
 
 type RawContributor = {
-  login: string;
-  avatar_url: string;
-  html_url: string;
+  login?: string;
+  avatar_url?: string;
+  html_url?: string;
   contributions: number;
-  type: 'User' | 'Bot';
+  type: 'User' | 'Bot' | 'Anonymous';
+  name?: string;
+  email?: string;
 };
 
 const originalFetch = globalThis.fetch;
@@ -38,8 +40,20 @@ function createDependabotContributor(login = 'dependabot[bot]', contributions = 
   return createBotContributor(login, contributions);
 }
 
+
+function createAnonymousContributor(index: number): RawContributor {
+  return {
+    name: `Anon ${index}`,
+    email: `anon-${index}@example.com`,
+    contributions: index,
+    type: 'Anonymous',
+  };
+}
+
 function installFetchMock(contributors: RawContributor[]) {
-  const pages = [contributors.slice(0, 100), contributors.slice(100, 200), contributors.slice(200)];
+  const pages = Array.from({ length: Math.ceil(contributors.length / 100) }, (_, index) =>
+    contributors.slice(index * 100, (index + 1) * 100),
+  );
   let githubRequests = 0;
   let avatarRequests = 0;
 
@@ -48,6 +62,7 @@ function installFetchMock(contributors: RawContributor[]) {
 
     if (url.origin === 'https://api.github.com') {
       githubRequests += 1;
+      assert.equal(url.searchParams.get('anon'), '1');
       const page = Number(url.searchParams.get('page') ?? '1');
       return Response.json(pages[page - 1] ?? []);
     }
@@ -93,6 +108,42 @@ describe('showcase routes', () => {
     assert.equal(payload.contributors.length, 205);
     assert.equal(payload.contributors.at(-1)?.login, 'user-205');
     assert.equal(requests.getGithubRequests(), 3);
+  });
+
+  it('loads anonymous contributors across pages beyond the named-account limit', async () => {
+    const contributors = [
+      ...Array.from({ length: 359 }, (_, index) => createContributor(index + 1)),
+      ...Array.from({ length: 246 }, (_, index) => createAnonymousContributor(index + 1)),
+    ];
+    const requests = installFetchMock(contributors);
+
+    const response = await getContributors(new Request('http://localhost/api/contributors?repo=owner/repo'));
+    const payload = (await response.json()) as {
+      stats: { fetched: number; returned: number };
+      contributors: Array<{ login: string; profileUrl: string | null; avatarUrl: string }>;
+    };
+
+    assert.equal(response.status, 200);
+    assert.equal(payload.stats.fetched, 605);
+    assert.equal(payload.stats.returned, 605);
+    assert.equal(payload.contributors.length, 605);
+    assert.equal(payload.contributors[359]?.login, 'Anon 1');
+    assert.equal(payload.contributors[359]?.profileUrl, null);
+    assert.match(payload.contributors[359]?.avatarUrl ?? '', /^data:image\/svg\+xml/);
+    assert.equal(requests.getGithubRequests(), 7);
+  });
+
+  it('renders anonymous contributors in the SVG without fetching remote avatars for them', async () => {
+    const contributors = [createContributor(1), createAnonymousContributor(1), createAnonymousContributor(2)];
+    const requests = installFetchMock(contributors);
+
+    const response = await getSvg(new Request('http://localhost/api/svg?repo=owner/repo'));
+    const svg = await response.text();
+
+    assert.equal(response.status, 200);
+    assert.equal((svg.match(/<image /g) ?? []).length, 3);
+    assert.match(svg, /Anon 1 · 1 contribution/);
+    assert.equal(requests.getAvatarRequests(), 1);
   });
 
   it('auto-excludes dependabot accounts by default', async () => {
