@@ -461,6 +461,8 @@ export default function HomePage() {
           <img className="preview-image" src={svgPath} alt="Contributor collage preview on a dark surface" />
         </article>
       </section>
+
+      <p className="api-note">Contributors pulled from the GitHub API may not reflect GitHub&apos;s UI display exactly.</p>
     </main>
   );
 }
