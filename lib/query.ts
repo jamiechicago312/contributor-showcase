@@ -92,7 +92,7 @@ export function parseExcludeList(value: string | null): string[] {
 export function parseShowcaseQuery(searchParams: SearchParamReader): ShowcaseQuery {
   return {
     repoInput: searchParams.get('repo')?.trim() || DEFAULT_REPO,
-    excludeBots: parseBoolean(searchParams.get('excludeBots'), true),
+    excludeBots: parseBoolean(searchParams.get('excludeBots'), false),
     excludeLogins: parseExcludeList(searchParams.get('exclude')),
     limit: parseLimit(searchParams.get('limit')),
     width: parseInteger(searchParams.get('width'), DEFAULT_WIDTH, 160, 1600),
@@ -113,8 +113,8 @@ export function buildQueryString(query: BuildQueryOptions): string {
   const params = new URLSearchParams();
   params.set('repo', query.repoInput.trim() || DEFAULT_REPO);
 
-  if (!query.excludeBots) {
-    params.set('excludeBots', 'false');
+  if (query.excludeBots) {
+    params.set('excludeBots', 'true');
   }
 
   if (query.excludeLogins.length > 0) {
