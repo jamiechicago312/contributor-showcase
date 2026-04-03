@@ -24,7 +24,7 @@ function createContributor(index: number): RawContributor {
   };
 }
 
-function createBotContributor(login = 'dependabot[bot]', contributions = 99): RawContributor {
+function createBotContributor(login = 'renovate[bot]', contributions = 99): RawContributor {
   return {
     login,
     avatar_url: `https://avatars.example.com/${login}.png`,
@@ -32,6 +32,10 @@ function createBotContributor(login = 'dependabot[bot]', contributions = 99): Ra
     contributions,
     type: 'Bot',
   };
+}
+
+function createDependabotContributor(login = 'dependabot[bot]', contributions = 99): RawContributor {
+  return createBotContributor(login, contributions);
 }
 
 function installFetchMock(contributors: RawContributor[]) {
@@ -91,7 +95,29 @@ describe('showcase routes', () => {
     assert.equal(requests.getGithubRequests(), 3);
   });
 
-  it('does not exclude bot accounts by default', async () => {
+  it('auto-excludes dependabot accounts by default', async () => {
+    const contributors = [createContributor(1), createDependabotContributor(), createContributor(2)];
+    installFetchMock(contributors);
+
+    const response = await getContributors(new Request('http://localhost/api/contributors?repo=owner/repo'));
+    const payload = (await response.json()) as {
+      stats: { fetched: number; returned: number; filteredOut: number };
+      contributors: Array<{ login: string }>;
+      options: { excludeBots: boolean };
+    };
+
+    assert.equal(response.status, 200);
+    assert.equal(payload.options.excludeBots, false);
+    assert.equal(payload.stats.fetched, 3);
+    assert.equal(payload.stats.returned, 2);
+    assert.equal(payload.stats.filteredOut, 1);
+    assert.deepEqual(
+      payload.contributors.map((contributor) => contributor.login),
+      ['user-1', 'user-2'],
+    );
+  });
+
+  it('does not exclude other bot accounts by default', async () => {
     const contributors = [createContributor(1), createBotContributor(), createContributor(2)];
     installFetchMock(contributors);
 
@@ -109,7 +135,7 @@ describe('showcase routes', () => {
     assert.equal(payload.stats.filteredOut, 0);
     assert.deepEqual(
       payload.contributors.map((contributor) => contributor.login),
-      ['user-1', 'dependabot[bot]', 'user-2'],
+      ['user-1', 'renovate[bot]', 'user-2'],
     );
   });
 
@@ -118,7 +144,7 @@ describe('showcase routes', () => {
     installFetchMock(contributors);
 
     const response = await getContributors(
-      new Request('http://localhost/api/contributors?repo=owner/repo&exclude=dependabot%5Bbot%5D,user-2'),
+      new Request('http://localhost/api/contributors?repo=owner/repo&exclude=renovate%5Bbot%5D,user-2'),
     );
     const payload = (await response.json()) as {
       stats: { returned: number; filteredOut: number };

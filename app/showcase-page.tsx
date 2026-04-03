@@ -265,7 +265,7 @@ export default function HomePage() {
               onBlur={() => window.setTimeout(() => setExcludeInputFocused(false), 120)}
               onChange={(event) => setFormState((current) => ({ ...current, exclude: event.target.value }))}
             />
-            <p className="field-hint">Start typing a login to get lightweight suggestions from the loaded contributor list.</p>
+            <p className="field-hint">Dependabot is hidden automatically. Start typing another login to get lightweight suggestions from the loaded contributor list.</p>
             {excludeInputFocused && contributorSuggestions.length > 0 ? (
               <div className="suggestion-list" role="listbox" aria-label="Contributor suggestions">
                 {contributorSuggestions.map((contributor) => (

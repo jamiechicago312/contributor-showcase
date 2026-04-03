@@ -1,5 +1,9 @@
 import type { Contributor, RawGitHubContributor } from '@/lib/types';
 
+function isDependabotLike(login: string): boolean {
+  return login.toLowerCase().startsWith('dependabot');
+}
+
 function isLikelyBot(login: string, type?: string): boolean {
   if (type === 'Bot') {
     return true;
@@ -9,8 +13,7 @@ function isLikelyBot(login: string, type?: string): boolean {
 
   return (
     normalized.endsWith('[bot]') ||
-    normalized === 'dependabot' ||
-    normalized.startsWith('dependabot') ||
+    isDependabotLike(login) ||
     normalized === 'renovate' ||
     normalized === 'github-actions' ||
     /(?:^|[-_])bot(?:$|[-_])/i.test(normalized)
@@ -41,7 +44,7 @@ export function filterContributors(
   const excluded = new Set(options.excludeLogins.map((login) => login.toLowerCase()));
 
   return contributors.filter((contributor) => {
-    if (excluded.has(contributor.login.toLowerCase())) {
+    if (isDependabotLike(contributor.login) || excluded.has(contributor.login.toLowerCase())) {
       return false;
     }
 
