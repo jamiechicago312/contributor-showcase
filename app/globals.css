@@ -134,6 +134,63 @@ button {
   color: #64748b;
 }
 
+.field-hint {
+  margin: -2px 0 0;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.suggestion-list {
+  display: grid;
+  gap: 8px;
+}
+
+.suggestion-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.56);
+  color: #e2e8f0;
+  text-align: left;
+}
+
+.suggestion-button:hover {
+  background: rgba(30, 41, 59, 0.88);
+}
+
+.suggestion-button span {
+  color: #f8fafc;
+}
+
+.suggestion-meta {
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-button {
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #bfdbfe;
+}
+
+.tag-button:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
 .checkbox-row {
   display: flex;
   align-items: center;

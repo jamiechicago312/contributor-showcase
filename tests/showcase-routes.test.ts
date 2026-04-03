@@ -9,7 +9,7 @@ type RawContributor = {
   avatar_url: string;
   html_url: string;
   contributions: number;
-  type: 'User';
+  type: 'User' | 'Bot';
 };
 
 const originalFetch = globalThis.fetch;
@@ -21,6 +21,16 @@ function createContributor(index: number): RawContributor {
     html_url: `https://github.com/user-${index}`,
     contributions: index,
     type: 'User',
+  };
+}
+
+function createBotContributor(login = 'dependabot[bot]', contributions = 99): RawContributor {
+  return {
+    login,
+    avatar_url: `https://avatars.example.com/${login}.png`,
+    html_url: `https://github.com/apps/${login}`,
+    contributions,
+    type: 'Bot',
   };
 }
 
@@ -79,6 +89,49 @@ describe('showcase routes', () => {
     assert.equal(payload.contributors.length, 205);
     assert.equal(payload.contributors.at(-1)?.login, 'user-205');
     assert.equal(requests.getGithubRequests(), 3);
+  });
+
+  it('does not exclude bot accounts by default', async () => {
+    const contributors = [createContributor(1), createBotContributor(), createContributor(2)];
+    installFetchMock(contributors);
+
+    const response = await getContributors(new Request('http://localhost/api/contributors?repo=owner/repo'));
+    const payload = (await response.json()) as {
+      stats: { fetched: number; returned: number; filteredOut: number };
+      contributors: Array<{ login: string }>;
+      options: { excludeBots: boolean };
+    };
+
+    assert.equal(response.status, 200);
+    assert.equal(payload.options.excludeBots, false);
+    assert.equal(payload.stats.fetched, 3);
+    assert.equal(payload.stats.returned, 3);
+    assert.equal(payload.stats.filteredOut, 0);
+    assert.deepEqual(
+      payload.contributors.map((contributor) => contributor.login),
+      ['user-1', 'dependabot[bot]', 'user-2'],
+    );
+  });
+
+  it('honors manual excludes from the query string', async () => {
+    const contributors = [createContributor(1), createBotContributor(), createContributor(2)];
+    installFetchMock(contributors);
+
+    const response = await getContributors(
+      new Request('http://localhost/api/contributors?repo=owner/repo&exclude=dependabot%5Bbot%5D,user-2'),
+    );
+    const payload = (await response.json()) as {
+      stats: { returned: number; filteredOut: number };
+      contributors: Array<{ login: string }>;
+    };
+
+    assert.equal(response.status, 200);
+    assert.equal(payload.stats.returned, 1);
+    assert.equal(payload.stats.filteredOut, 2);
+    assert.deepEqual(
+      payload.contributors.map((contributor) => contributor.login),
+      ['user-1'],
+    );
   });
 
   it('still honors an explicit numeric limit', async () => {

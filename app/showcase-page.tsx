@@ -26,7 +26,6 @@ type ContributorResponse = {
 
 type FormState = {
   repoInput: string;
-  excludeBots: boolean;
   exclude: string;
   width: string;
   height: string;
@@ -36,7 +35,6 @@ type FormState = {
 
 const DEFAULT_STATE: FormState = {
   repoInput: 'OpenHands/OpenHands',
-  excludeBots: true,
   exclude: '',
   width: '830',
   height: '',
@@ -53,13 +51,21 @@ function parseOptionalInt(value: string | null, fallback: string): string {
 function readFormState(searchParams: URLSearchParams): FormState {
   return {
     repoInput: searchParams.get('repo')?.trim() || DEFAULT_STATE.repoInput,
-    excludeBots: searchParams.get('excludeBots') !== 'false',
     exclude: searchParams.get('exclude') || '',
     width: parseOptionalInt(searchParams.get('width'), DEFAULT_STATE.width),
     height: searchParams.get('height') || '',
     size: parseOptionalInt(searchParams.get('size'), DEFAULT_STATE.size),
     gap: parseOptionalInt(searchParams.get('gap'), DEFAULT_STATE.gap),
   };
+}
+
+function getActiveExcludeToken(value: string): string {
+  return value.split(',').at(-1)?.trim().toLowerCase() ?? '';
+}
+
+function replaceActiveExcludeToken(value: string, login: string): string {
+  const existing = parseExcludeList(value.split(',').slice(0, -1).join(','));
+  return `${[...existing, login.toLowerCase()].join(', ')}, `;
 }
 
 export default function HomePage() {
@@ -73,9 +79,26 @@ export default function HomePage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [copyMessage, setCopyMessage] = useState('');
+  const [excludeInputFocused, setExcludeInputFocused] = useState(false);
 
   const searchParamString = searchParams.toString();
   const currentState = useMemo(() => readFormState(new URLSearchParams(searchParamString)), [searchParamString]);
+  const excludedLogins = useMemo(() => parseExcludeList(formState.exclude), [formState.exclude]);
+  const activeExcludeToken = useMemo(() => getActiveExcludeToken(formState.exclude), [formState.exclude]);
+  const contributorSuggestions = useMemo(() => {
+    if (!data || !activeExcludeToken) {
+      return [];
+    }
+
+    const excluded = new Set(excludedLogins);
+
+    return data.contributors
+      .filter((contributor) => {
+        const login = contributor.login.toLowerCase();
+        return !excluded.has(login) && login.includes(activeExcludeToken);
+      })
+      .slice(0, 8);
+  }, [activeExcludeToken, data, excludedLogins]);
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -89,7 +112,7 @@ export default function HomePage() {
   useEffect(() => {
     const params = buildQueryString({
       repoInput: appliedState.repoInput,
-      excludeBots: appliedState.excludeBots,
+      excludeBots: false,
       excludeLogins: parseExcludeList(appliedState.exclude),
     });
 
@@ -141,7 +164,7 @@ export default function HomePage() {
     () =>
       buildQueryString({
         repoInput: appliedState.repoInput,
-        excludeBots: appliedState.excludeBots,
+        excludeBots: false,
         excludeLogins: parseExcludeList(appliedState.exclude),
         width: appliedState.width ? Number.parseInt(appliedState.width, 10) : null,
         height: appliedState.height ? Number.parseInt(appliedState.height, 10) : null,
@@ -166,13 +189,28 @@ export default function HomePage() {
     }
   }
 
+  function applyExcludeSuggestion(login: string) {
+    setFormState((current) => ({
+      ...current,
+      exclude: replaceActiveExcludeToken(current.exclude, login),
+    }));
+  }
+
+  function removeExcludedLogin(login: string) {
+    setFormState((current) => ({
+      ...current,
+      exclude: parseExcludeList(current.exclude)
+        .filter((item) => item !== login.toLowerCase())
+        .join(', '),
+    }));
+  }
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const nextState: FormState = {
       repoInput: formState.repoInput.trim() || DEFAULT_STATE.repoInput,
-      excludeBots: formState.excludeBots,
-      exclude: formState.exclude,
+      exclude: excludedLogins.join(', '),
       width: formState.width || DEFAULT_STATE.width,
       height: formState.height,
       size: formState.size || DEFAULT_STATE.size,
@@ -181,7 +219,7 @@ export default function HomePage() {
 
     const params = buildQueryString({
       repoInput: nextState.repoInput,
-      excludeBots: nextState.excludeBots,
+      excludeBots: false,
       excludeLogins: parseExcludeList(nextState.exclude),
       width: nextState.width ? Number.parseInt(nextState.width, 10) : null,
       height: nextState.height ? Number.parseInt(nextState.height, 10) : null,
@@ -200,7 +238,7 @@ export default function HomePage() {
           <span className="eyebrow">README-safe contributor collage</span>
           <h1>Turn any public GitHub repository into a transparent avatar wall.</h1>
           <p>
-            Paste a repository, filter bots, preview the SVG, and copy a Markdown-ready image URL for your GitHub README.
+            Paste a repository, optionally hide specific logins, preview the SVG, and copy a Markdown-ready image URL for your GitHub README.
           </p>
         </div>
 
@@ -215,23 +253,44 @@ export default function HomePage() {
             />
           </label>
 
-          <label className="field-group checkbox-row">
-            <input
-              type="checkbox"
-              checked={formState.excludeBots}
-              onChange={(event) => setFormState((current) => ({ ...current, excludeBots: event.target.checked }))}
-            />
-            <span>Exclude bots automatically</span>
-          </label>
-
-          <label className="field-group">
-            <span>Manual excludes</span>
+          <label className="field-group field-span-2">
+            <span>Exclude contributors</span>
             <input
               name="exclude"
-              placeholder="dependabot, renovate"
+              placeholder="dependabot[bot], renovate[bot]"
+              autoComplete="off"
+              spellCheck={false}
               value={formState.exclude}
+              onFocus={() => setExcludeInputFocused(true)}
+              onBlur={() => window.setTimeout(() => setExcludeInputFocused(false), 120)}
               onChange={(event) => setFormState((current) => ({ ...current, exclude: event.target.value }))}
             />
+            <p className="field-hint">Start typing a login to get lightweight suggestions from the loaded contributor list.</p>
+            {excludeInputFocused && contributorSuggestions.length > 0 ? (
+              <div className="suggestion-list" role="listbox" aria-label="Contributor suggestions">
+                {contributorSuggestions.map((contributor) => (
+                  <button
+                    key={contributor.login}
+                    type="button"
+                    className="suggestion-button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => applyExcludeSuggestion(contributor.login)}
+                  >
+                    <span>{contributor.login}</span>
+                    <small className="suggestion-meta">{contributor.contributions} contributions</small>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {excludedLogins.length > 0 ? (
+              <div className="tag-list" aria-label="Excluded contributors">
+                {excludedLogins.map((login) => (
+                  <button key={login} type="button" className="tag-button" onClick={() => removeExcludedLogin(login)}>
+                    {login} ×
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </label>
 
           <fieldset className="field-group field-span-2 layout-fieldset">
@@ -353,7 +412,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <strong>{data.stats.filteredOut}</strong>
-                  <span>filtered out</span>
+                  <span>excluded</span>
                 </div>
               </div>
               <p className="muted">
